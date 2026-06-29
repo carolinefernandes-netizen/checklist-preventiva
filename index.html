@@ -2264,21 +2264,16 @@ let fbReady = false;
 let justSaved = false;
 
 // ── HELPERS DE MÊS ───────────────────────────────────────────────────────────
-function currentYYYYMM() {
+function monthKey(offset = 0) {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-}
-function prevYYYYMM() {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - 1);
+  d.setDate(1); d.setMonth(d.getMonth() + offset);
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
-function buildFreshState(key, carryOver) {
+function buildFreshState(key, carryOver = []) {
   const u = UNITS[key];
   return u.docas.map(d => {
-    const prev = (carryOver || []).find(c => c.num === d.num);
+    const prev = carryOver.find(c => c.num === d.num);
     const openP = prev && !prev.portaoAtend && (prev.portao === 'ressalva' || prev.portao === 'naook');
     const openN = prev && !prev.nivelAtend  && (prev.nivel  === 'ressalva' || prev.nivel  === 'naook');
     return {
@@ -2337,18 +2332,18 @@ function loadUnit(key) {
   clearTimeout(saveTimer); // Cancela save pendente de outra unidade
   if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
 
-  const mes = currentYYYYMM();
+  const mes = monthKey();
   const docRef = db.collection('checklists').doc(key + '_' + mes);
 
   docRef.get().then(snap => {
     // Se documento existe e tem docas, usa ele. Senão, recria (corrige dados corrompidos)
     if (snap.exists && (snap.data().docas || []).length > 0) { startSnapshot(docRef); return; }
-    return db.collection('checklists').doc(key + '_' + prevYYYYMM()).get().then(prevSnap => {
+    return db.collection('checklists').doc(key + '_' + monthKey(-1)).get().then(prevSnap => {
       nextId = 1;
       return docRef.set({
         unitKey: key, mes,
         dataGlobal: '', respGlobal: '',
-        docas: buildFreshState(key, prevSnap.exists ? (prevSnap.data().docas || []) : []),
+        docas: buildFreshState(key, prevSnap.exists ? prevSnap.data().docas : []),
       }).then(() => startSnapshot(docRef));
     });
   }).catch(e => { console.error('loadUnit error:', e); setSyncStatus('Erro'); });
@@ -2380,7 +2375,7 @@ function scheduleSave() {
 function saveToFirestore() {
   if (!fbReady || !state.length) return;
   justSaved = true;
-  const mes = currentYYYYMM();
+  const mes = monthKey();
   db.collection('checklists').doc(currentUnitKey + '_' + mes).update({
     dataGlobal: document.getElementById('data-global').value,
     respGlobal: document.getElementById('resp-global').value,
@@ -2389,10 +2384,7 @@ function saveToFirestore() {
     .catch(e => { console.error('save error:', e); setSyncStatus('Erro ao salvar'); });
 }
 
-function setSyncStatus(msg) {
-  const el = document.getElementById('sync-status');
-  if (el) el.textContent = msg;
-}
+function setSyncStatus(msg) { document.getElementById('sync-status').textContent = msg; }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderAll() {

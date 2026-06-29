@@ -2485,7 +2485,11 @@ function toggleCard(id) {
 
 function setStatus(id, campo, val) {
   const d = state.find(x => x.id === id);
-  if (d) { d[campo] = val; renderAll(); scheduleSave(); }
+  if (!d) return;
+  if (d[campo] === val) { d[campo] = ''; d[campo + 'Obs'] = ''; }
+  else { d[campo] = val; }
+  renderAll();
+  scheduleSave();
 }
 
 function setObs(id, campo, val) {

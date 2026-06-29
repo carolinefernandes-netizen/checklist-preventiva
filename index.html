@@ -390,7 +390,7 @@
 
   /* Gestor */
   .gestor-link { display:block; text-align:center; margin:4px 0 12px; background:none; border:none; color:var(--text-muted); font-size:11px; cursor:pointer; text-decoration:underline; }
-  #gestor-panel { position:fixed; inset:0; background:var(--bg); z-index:200; display:none; flex-direction:column; overflow-y:auto; }
+  #gestor-panel { position:fixed; inset:0; background:#1a1a18; z-index:200; display:none; flex-direction:column; overflow-y:auto; }
   .gestor-header { background:var(--surface-2); padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; }
   .gestor-body { padding:16px; max-width:720px; margin:0 auto; width:100%; }
   .gestor-controls { display:flex; gap:8px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; }
@@ -399,6 +399,7 @@
   .gestor-table td { padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; }
   .gestor-table tr:nth-child(even) td { background:var(--surface-1); }
   .gestor-table td:nth-child(2) { text-align:left; }
+  .sticky-top { position:sticky; top:0; z-index:99; background:#1a1a18; padding-bottom:4px; }
 </style>
 </head>
 <body>
@@ -415,25 +416,29 @@
 
 <div class="container">
 
-  <div class="unit-card">
-    <label>Unidade</label>
-    <select id="unit-select" onchange="onUnitChange()"></select>
-  </div>
+  <button class="gestor-link" onclick="openGestorLogin()">🔒 Área do Gestor</button>
 
-  <div class="meta-card">
-    <div class="meta-grid">
-      <div class="field">
-        <label>Data</label>
-        <input type="date" id="data-global" />
-      </div>
-      <div class="field">
-        <label>Responsável</label>
-        <input type="text" id="resp-global" placeholder="Nome do técnico" />
-      </div>
+  <div class="sticky-top">
+    <div class="unit-card">
+      <label>Unidade</label>
+      <select id="unit-select" onchange="onUnitChange()"></select>
     </div>
-    <div class="field" style="margin-top:10px;">
-      <label>Observação Geral da Visita</label>
-      <textarea id="obs-geral" placeholder="Anotações gerais da visita..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface-1);resize:none;min-height:58px;"></textarea>
+
+    <div class="meta-card">
+      <div class="meta-grid">
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="data-global" />
+        </div>
+        <div class="field">
+          <label>Responsável</label>
+          <input type="text" id="resp-global" placeholder="Nome do técnico" />
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px;">
+        <label>Observação Geral da Visita</label>
+        <textarea id="obs-geral" placeholder="Anotações gerais da visita..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface-1);resize:none;min-height:58px;"></textarea>
+      </div>
     </div>
   </div>
 
@@ -468,7 +473,6 @@
     <button class="btn btn-primary" onclick="exportXLSX()">📊 Exportar XLSX</button>
   </div>
 
-  <button class="gestor-link" onclick="openGestorLogin()">🔒 Área do Gestor</button>
 
 </div>
 

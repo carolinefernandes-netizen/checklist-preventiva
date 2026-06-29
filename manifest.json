@@ -1,0 +1,16 @@
+{
+  "name": "Checklist Preventiva — Belcito",
+  "short_name": "Belcito",
+  "start_url": "/checklist-preventiva/",
+  "display": "standalone",
+  "background_color": "#1a1a18",
+  "theme_color": "#1a1a18",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

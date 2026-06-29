@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checklist Preventiva — Belcito</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a18">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Belcito">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -413,9 +418,16 @@
         <input type="text" id="resp-global" placeholder="Nome do técnico" />
       </div>
     </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Observação Geral da Visita</label>
+      <textarea id="obs-geral" placeholder="Anotações gerais da visita..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface-1);resize:none;min-height:58px;"></textarea>
+    </div>
   </div>
 
-  <div class="section-title">Docas</div>
+  <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Docas</span>
+    <span id="docas-progress" style="font-weight:400;color:var(--text-muted);font-size:11px;letter-spacing:0;text-transform:none;"></span>
+  </div>
   <div id="docas-container"></div>
   <button class="add-doca-btn" onclick="openAddModal()">+ Adicionar doca</button>
 
@@ -2309,6 +2321,7 @@ function init() {
     state.forEach(d => { if (!d.respManual) d.resp = val; });
     scheduleSave();
   });
+  document.getElementById('obs-geral').addEventListener('input', scheduleSave);
 
   setSyncStatus('Conectando...');
   firebase.auth().signInAnonymously()
@@ -2358,6 +2371,7 @@ function startSnapshot(docRef) {
     const data = snap.data();
     document.getElementById('data-global').value = data.dataGlobal || '';
     document.getElementById('resp-global').value = data.respGlobal || '';
+    document.getElementById('obs-geral').value = data.obsGeral || '';
     const openIds = new Set(state.filter(d => d.open).map(d => d.id));
     state = (data.docas || []).map(d => ({ ...d, open: openIds.has(d.id) }));
     nextId = state.length ? Math.max(...state.map(d => d.id)) + 1 : 1;
@@ -2379,6 +2393,7 @@ function saveToFirestore() {
   db.collection('checklists').doc(currentUnitKey + '_' + mes).update({
     dataGlobal: document.getElementById('data-global').value,
     respGlobal: document.getElementById('resp-global').value,
+    obsGeral: document.getElementById('obs-geral').value,
     docas: state,
   }).then(() => setSyncStatus('✓ Salvo'))
     .catch(e => { console.error('save error:', e); setSyncStatus('Erro ao salvar'); });
@@ -2556,6 +2571,7 @@ function updateSummary() {
   document.getElementById('progress-pct').textContent = pct + '%';
   document.getElementById('progress-fill').style.width = pct + '%';
   document.getElementById('header-subtitle').textContent = state.length + ' docas · ' + pct + '% preenchido';
+  document.getElementById('docas-progress').textContent = filled + '/' + total + ' preenchidos';
   updateCorretivas();
 }
 
@@ -2621,6 +2637,7 @@ async function exportXLSX() {
   const u = UNITS[currentUnitKey];
   const data = document.getElementById('data-global').value || '';
   const resp = document.getElementById('resp-global').value || '';
+  const obsGeral = document.getElementById('obs-geral').value || '';
   const dataFmt = data ? data.split('-').reverse().join('/') : '';
   const SL = { ok:'Preventiva Ok', ressalva:'Com Ressalvas', naook:'Não Ok', naoapl:'Não se Aplica', '':'Não preenchido' };
 
@@ -2697,6 +2714,14 @@ async function exportXLSX() {
     });
   });
 
+  if (obsGeral) {
+    r += 1;
+    ws.getCell('A'+r).value = 'OBS. GERAL DA VISITA';
+    ws.getCell('A'+r).font = { bold: true };
+    r++;
+    ws.getCell('A'+r).value = obsGeral;
+  }
+
   r += 1;
   ws.getCell('A'+r).value = 'RESUMO';
   ws.getCell('A'+r).font = { bold: true };
@@ -2755,6 +2780,10 @@ function showToast(msg) {
 }
 
 init();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/checklist-preventiva/sw.js');
+}
 </script>
 </body>
 </html>

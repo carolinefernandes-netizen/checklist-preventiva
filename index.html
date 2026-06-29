@@ -390,16 +390,36 @@
 
   /* Gestor */
   .gestor-link { display:block; text-align:center; margin:4px 0 12px; background:none; border:none; color:var(--text-muted); font-size:11px; cursor:pointer; text-decoration:underline; }
-  #gestor-panel { position:fixed; inset:0; background:#1a1a18; z-index:200; display:none; flex-direction:column; overflow-y:auto; }
-  .gestor-header { background:var(--surface-2); padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; }
-  .gestor-body { padding:16px; max-width:720px; margin:0 auto; width:100%; }
-  .gestor-controls { display:flex; gap:8px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; }
-  .gestor-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
-  .gestor-table th { background:#CC0000; color:#fff; padding:7px 8px; text-align:center; white-space:nowrap; }
-  .gestor-table td { padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; }
-  .gestor-table tr:nth-child(even) td { background:var(--surface-1); }
-  .gestor-table td:nth-child(2) { text-align:left; }
-  .sticky-top { position:sticky; top:0; z-index:99; background:#1a1a18; padding-bottom:4px; }
+  #gestor-panel { position:fixed; inset:0; background:#f0f0ee; z-index:200; display:none; flex-direction:column; overflow-y:auto; font-family:var(--font); }
+  .gestor-header { background:#1a1a18; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:10; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+  .gestor-header h2 { color:#fff; font-size:15px; font-weight:700; letter-spacing:.3px; }
+  .gestor-header .g-sub { color:#aaa; font-size:11px; margin-top:2px; }
+  .gestor-sair { background:#CC0000; color:#fff; border:none; border-radius:6px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+  .gestor-body { padding:20px 16px; max-width:760px; margin:0 auto; width:100%; }
+  .gestor-card { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.10); padding:16px; margin-bottom:16px; }
+  .gestor-card h3 { font-size:13px; font-weight:700; color:#1a1a18; margin-bottom:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .gestor-controls { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+  .gestor-controls .field label { color:#444; font-size:12px; font-weight:600; }
+  .gestor-controls input[type=month] { background:#f4f4f2; border:1px solid #ccc; color:#1a1a18; border-radius:6px; padding:8px 10px; font-size:13px; }
+  .gestor-controls .btn-carregar { background:#CC0000; color:#fff; border:none; border-radius:6px; padding:9px 20px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .gestor-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); gap:10px; margin-bottom:16px; }
+  .g-stat { background:#fff; border-radius:10px; box-shadow:0 1px 4px rgba(0,0,0,.10); padding:12px; text-align:center; }
+  .g-stat .g-num { font-size:22px; font-weight:800; color:#1a1a18; }
+  .g-stat .g-lbl { font-size:10px; color:#777; text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
+  .g-stat.g-ok .g-num { color:#2e7d32; }
+  .g-stat.g-res .g-num { color:#e65100; }
+  .g-stat.g-nok .g-num { color:#CC0000; }
+  .g-stat.g-corr .g-num { color:#6a1a1a; }
+  .gestor-table-wrap { overflow-x:auto; }
+  .gestor-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .gestor-table thead tr { background:#1a1a18; }
+  .gestor-table th { color:#fff; padding:9px 10px; text-align:center; font-weight:600; white-space:nowrap; font-size:11px; letter-spacing:.3px; }
+  .gestor-table th:nth-child(2) { text-align:left; }
+  .gestor-table td { padding:8px 10px; border-bottom:1px solid #e8e8e6; text-align:center; color:#222; font-size:12px; }
+  .gestor-table td:nth-child(2) { text-align:left; font-weight:500; }
+  .gestor-table tr:hover td { background:#fafaf8; }
+  .gestor-table .sem-dados td { color:#aaa; font-style:italic; }
+  .gestor-export-btn { background:#CC0000; color:#fff; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:16px; letter-spacing:.3px; }
 </style>
 </head>
 <body>
@@ -496,29 +516,45 @@
 <!-- GESTOR PANEL -->
 <div id="gestor-panel">
   <div class="gestor-header">
-    <h2 style="color:var(--text-main);font-size:16px;font-weight:700;">Área do Gestor</h2>
-    <button class="btn" onclick="fecharGestor()">✕ Sair</button>
+    <div>
+      <h2>Área do Gestor</h2>
+      <div class="g-sub">Checklist Preventiva — Belcito</div>
+    </div>
+    <button class="gestor-sair" onclick="fecharGestor()">✕ Sair</button>
   </div>
   <div class="gestor-body">
-    <div class="gestor-controls">
-      <div class="field" style="flex:1;min-width:160px;">
-        <label>Mês de referência</label>
-        <input type="month" id="gestor-mes" />
+
+    <div class="gestor-card">
+      <h3>Período</h3>
+      <div class="gestor-controls">
+        <div class="field" style="flex:1;min-width:160px;">
+          <label>Mês de referência</label><br>
+          <input type="month" id="gestor-mes" />
+        </div>
+        <button class="btn-carregar" onclick="gestorCarregar()">Carregar dados</button>
       </div>
-      <button class="btn btn-primary" onclick="gestorCarregar()">Carregar</button>
     </div>
+
     <div id="gestor-tabela-wrap" style="display:none;">
-      <table class="gestor-table">
-        <thead>
-          <tr>
-            <th>Cliente</th><th>Unidade</th><th>Preench.</th>
-            <th>Ok</th><th>Ressalvas</th><th>Não Ok</th><th>Corretivas</th>
-          </tr>
-        </thead>
-        <tbody id="gestor-table-body"></tbody>
-      </table>
-      <button class="btn btn-primary" style="margin-top:16px;width:100%;" onclick="exportGestorXLSX()">📊 Exportar XLSX Consolidado</button>
+      <div class="gestor-stats" id="gestor-stats"></div>
+
+      <div class="gestor-card">
+        <h3>Unidades</h3>
+        <div class="gestor-table-wrap">
+          <table class="gestor-table">
+            <thead>
+              <tr>
+                <th>Cliente</th><th>Unidade</th><th>Preench.</th>
+                <th>✓ Ok</th><th>⚠ Ressalvas</th><th>✗ Não Ok</th><th>Corretivas</th>
+              </tr>
+            </thead>
+            <tbody id="gestor-table-body"></tbody>
+          </table>
+        </div>
+        <button class="gestor-export-btn" onclick="exportGestorXLSX()">📊 Exportar XLSX Consolidado</button>
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -2875,6 +2911,7 @@ async function gestorCarregar() {
   gestorDados = {};
   const tbody = document.getElementById('gestor-table-body');
   tbody.innerHTML = '';
+  let gOk=0,gRes=0,gNok=0,gCorr=0,gTotal=0,gFilled=0;
   snaps.forEach((snap, i) => {
     const key = keys[i];
     const u = UNITS[key];
@@ -2884,24 +2921,32 @@ async function gestorCarregar() {
     if (doc && doc.docas) {
       doc.docas.forEach(d => {
         [d.portao, d.nivel].forEach(v => {
-          total++; if(v) filled++;
-          if(v==='ok') ok++;
-          else if(v==='ressalva') res++;
-          else if(v==='naook') nok++;
+          total++; gTotal++; if(v){ filled++; gFilled++; }
+          if(v==='ok'){ ok++; gOk++; }
+          else if(v==='ressalva'){ res++; gRes++; }
+          else if(v==='naook'){ nok++; gNok++; }
         });
       });
     }
+    const corr = res + nok; gCorr += corr;
     const pct = total ? Math.round(filled/total*100) : 0;
     const tr = document.createElement('tr');
-    if (!doc) tr.style.opacity = '0.4';
+    if (!doc) tr.className = 'sem-dados';
     tr.innerHTML = `<td>${u.cliente}</td><td>${u.unidade}</td>`
       + `<td>${doc ? pct+'%' : '—'}</td>`
       + `<td>${doc ? ok   : '—'}</td>`
       + `<td>${doc ? res  : '—'}</td>`
       + `<td>${doc ? nok  : '—'}</td>`
-      + `<td>${doc ? res+nok : '—'}</td>`;
+      + `<td>${doc ? corr : '—'}</td>`;
     tbody.appendChild(tr);
   });
+  const gPct = gTotal ? Math.round(gFilled/gTotal*100) : 0;
+  document.getElementById('gestor-stats').innerHTML =
+    `<div class="g-stat"><div class="g-num">${gPct}%</div><div class="g-lbl">Preenchimento geral</div></div>`
+    +`<div class="g-stat g-ok"><div class="g-num">${gOk}</div><div class="g-lbl">Preventiva Ok</div></div>`
+    +`<div class="g-stat g-res"><div class="g-num">${gRes}</div><div class="g-lbl">Com Ressalvas</div></div>`
+    +`<div class="g-stat g-nok"><div class="g-num">${gNok}</div><div class="g-lbl">Não Ok</div></div>`
+    +`<div class="g-stat g-corr"><div class="g-num">${gCorr}</div><div class="g-lbl">Corretivas</div></div>`;
   document.getElementById('gestor-tabela-wrap').style.display = 'block';
   setSyncStatus('');
 }

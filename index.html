@@ -2334,13 +2334,15 @@ function loadUnit(key) {
     '<p style="text-align:center;color:var(--text-muted);padding:2rem;">Carregando...</p>';
   setSyncStatus('Carregando...');
 
+  clearTimeout(saveTimer); // Cancela save pendente de outra unidade
   if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
 
   const mes = currentYYYYMM();
   const docRef = db.collection('checklists').doc(key + '_' + mes);
 
   docRef.get().then(snap => {
-    if (snap.exists) { startSnapshot(docRef); return; }
+    // Se documento existe e tem docas, usa ele. Senão, recria (corrige dados corrompidos)
+    if (snap.exists && (snap.data().docas || []).length > 0) { startSnapshot(docRef); return; }
     return db.collection('checklists').doc(key + '_' + prevYYYYMM()).get().then(prevSnap => {
       nextId = 1;
       return docRef.set({
@@ -2565,9 +2567,9 @@ function updateCorretivas() {
   const list = document.getElementById('corretivas-list');
   const items = [];
   state.forEach(d => {
-    if ((d.portao === 'ressalva' || d.portao === 'naook') && !d.portaoAtend)
+    if ((d.portao === 'ressalva' || d.portao === 'naook') && !(d.portaoAtend && d.portaoMotivo))
       items.push({ id: d.id, doca: d.num, equip: 'Portão', obs: d.portaoObs || '—', atendField: 'portaoAtend', motivoField: 'portaoMotivo', atend: d.portaoAtend, motivo: d.portaoMotivo });
-    if ((d.nivel === 'ressalva' || d.nivel === 'naook') && !d.nivelAtend)
+    if ((d.nivel === 'ressalva' || d.nivel === 'naook') && !(d.nivelAtend && d.nivelMotivo))
       items.push({ id: d.id, doca: d.num, equip: 'Niveladora', obs: d.nivelObs || '—', atendField: 'nivelAtend', motivoField: 'nivelMotivo', atend: d.nivelAtend, motivo: d.nivelMotivo });
   });
   if (!items.length) {

@@ -2844,7 +2844,8 @@ async function gestorLogin() {
       document.getElementById('gestor-erro').textContent = 'Documento _config/gestor não encontrado no Firestore.';
       return;
     }
-    if (snap.data().senha !== senha) {
+    const senhaCorreta = snap.data().senha ?? snap.data().gestor?.senha;
+    if (senhaCorreta !== senha) {
       document.getElementById('gestor-erro').textContent = 'Senha incorreta.';
       return;
     }

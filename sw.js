@@ -1,4 +1,4 @@
-const CACHE = 'belcito-v1';
+const CACHE = 'belcito-v2';
 const ASSETS = [
   '/checklist-preventiva/',
   '/checklist-preventiva/index.html',

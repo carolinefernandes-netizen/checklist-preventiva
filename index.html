@@ -387,6 +387,18 @@
     white-space: nowrap;
   }
   .toast.show { opacity: 1; }
+
+  /* Gestor */
+  .gestor-link { display:block; text-align:center; margin:4px 0 12px; background:none; border:none; color:var(--text-muted); font-size:11px; cursor:pointer; text-decoration:underline; }
+  #gestor-panel { position:fixed; inset:0; background:var(--bg); z-index:200; display:none; flex-direction:column; overflow-y:auto; }
+  .gestor-header { background:var(--surface-2); padding:14px 16px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); position:sticky; top:0; }
+  .gestor-body { padding:16px; max-width:720px; margin:0 auto; width:100%; }
+  .gestor-controls { display:flex; gap:8px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; }
+  .gestor-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
+  .gestor-table th { background:#CC0000; color:#fff; padding:7px 8px; text-align:center; white-space:nowrap; }
+  .gestor-table td { padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; }
+  .gestor-table tr:nth-child(even) td { background:var(--surface-1); }
+  .gestor-table td:nth-child(2) { text-align:left; }
 </style>
 </head>
 <body>
@@ -456,6 +468,53 @@
     <button class="btn btn-primary" onclick="exportXLSX()">📊 Exportar XLSX</button>
   </div>
 
+  <button class="gestor-link" onclick="openGestorLogin()">🔒 Área do Gestor</button>
+
+</div>
+
+<!-- GESTOR LOGIN MODAL -->
+<div class="modal-overlay" id="gestor-login-modal" style="display:none;">
+  <div class="modal">
+    <h3>Área do Gestor</h3>
+    <div class="field" style="margin-top:12px;">
+      <label>Senha</label>
+      <input type="password" id="gestor-senha" placeholder="Digite a senha" onkeydown="if(event.key==='Enter')gestorLogin()" />
+    </div>
+    <p id="gestor-erro" style="color:#CC0000;font-size:12px;margin-top:6px;min-height:16px;"></p>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" onclick="closeGestorLogin()">Cancelar</button>
+      <button class="btn btn-primary" onclick="gestorLogin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- GESTOR PANEL -->
+<div id="gestor-panel">
+  <div class="gestor-header">
+    <h2 style="color:var(--text-main);font-size:16px;font-weight:700;">Área do Gestor</h2>
+    <button class="btn" onclick="fecharGestor()">✕ Sair</button>
+  </div>
+  <div class="gestor-body">
+    <div class="gestor-controls">
+      <div class="field" style="flex:1;min-width:160px;">
+        <label>Mês de referência</label>
+        <input type="month" id="gestor-mes" />
+      </div>
+      <button class="btn btn-primary" onclick="gestorCarregar()">Carregar</button>
+    </div>
+    <div id="gestor-tabela-wrap" style="display:none;">
+      <table class="gestor-table">
+        <thead>
+          <tr>
+            <th>Cliente</th><th>Unidade</th><th>Preench.</th>
+            <th>Ok</th><th>Ressalvas</th><th>Não Ok</th><th>Corretivas</th>
+          </tr>
+        </thead>
+        <tbody id="gestor-table-body"></tbody>
+      </table>
+      <button class="btn btn-primary" style="margin-top:16px;width:100%;" onclick="exportGestorXLSX()">📊 Exportar XLSX Consolidado</button>
+    </div>
+  </div>
 </div>
 
 <!-- ADD MODAL -->
@@ -2634,113 +2693,95 @@ function exportCSV() {
 }
 
 // ── EXPORT XLSX (formato Belcito) ─────────────────────────────────────────────
-async function exportXLSX() {
-  const u = UNITS[currentUnitKey];
-  const data = document.getElementById('data-global').value || '';
-  const resp = document.getElementById('resp-global').value || '';
-  const obsGeral = document.getElementById('obs-geral').value || '';
-  const dataFmt = data ? data.split('-').reverse().join('/') : '';
+function buildWS(wb, unitKey, doc) {
+  const u = UNITS[unitKey];
+  const docas    = doc.docas    || [];
+  const data     = doc.dataGlobal || '';
+  const resp     = doc.respGlobal || '';
+  const obsGeral = doc.obsGeral  || '';
+  const dataFmt  = data ? data.split('-').reverse().join('/') : '';
   const SL = { ok:'Preventiva Ok', ressalva:'Com Ressalvas', naook:'Não Ok', naoapl:'Não se Aplica', '':'Não preenchido' };
 
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet('Preventiva');
+  const wsName = u.unidade.replace(/[\\\/\?\*\[\]:]/g,'').substring(0, 31);
+  const ws = wb.addWorksheet(wsName);
 
-  // Linha de logos (row 1)
   ws.getRow(1).height = 55;
-  for (let c = 1; c <= 8; c++) {
-    const cell = ws.getCell(1, c);
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A1A18' } };
-  }
+  for (let c = 1; c <= 8; c++)
+    ws.getCell(1, c).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF1A1A18' } };
   const belcitoImgId = wb.addImage({ base64: LOGOS.belcito, extension: 'png' });
-  const clienteImgId = wb.addImage({ base64: LOGOS[u.logo], extension: 'png' });
-  ws.addImage(belcitoImgId, { tl: { col: 0, row: 0 }, ext: { width: 230, height: 45 } });
+  const clienteImgId = wb.addImage({ base64: LOGOS[u.logo],  extension: 'png' });
+  ws.addImage(belcitoImgId, { tl:{ col:0, row:0 }, ext:{ width:230, height:45 } });
 
-  // Linhas 2-5: cliente (logo)/unidade/legenda
-  ws.mergeCells('A2:A5');
-  ws.mergeCells('B2:B5');
-  ws.mergeCells('C2:C5');
-  ws.addImage(clienteImgId, { tl: { col: 0.12, row: 1.35 }, ext: { width: 100, height: 45 }, editAs: 'oneCell' });
+  ws.mergeCells('A2:A5'); ws.mergeCells('B2:B5'); ws.mergeCells('C2:C5');
+  ws.addImage(clienteImgId, { tl:{ col:0.12, row:1.35 }, ext:{ width:100, height:45 }, editAs:'oneCell' });
   ws.getCell('B2').value = u.unidade;
   ws.getCell('C2').value = 'Legenda:';
-  [ 'A2', 'B2', 'C2' ].forEach(addr => {
+  ['A2','B2','C2'].forEach(addr => {
     const cell = ws.getCell(addr);
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFA6A6A6' } };
-    cell.font = { bold: true };
-    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFA6A6A6' } };
+    cell.font = { bold:true };
+    cell.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
   });
-  const statusKeys = ['ok','ressalva','naook','naoapl'];
-  statusKeys.forEach((k, i) => {
-    const r = 2 + i;
-    ws.getCell('D'+r).value = STATUS_INFO[k].label;
-    ws.getCell('E'+r).value = STATUS_INFO[k].desc;
-    ws.getCell('D'+r).font = { bold: true };
+  ['ok','ressalva','naook','naoapl'].forEach((k, i) => {
+    ws.getCell('D'+(2+i)).value = STATUS_INFO[k].label;
+    ws.getCell('E'+(2+i)).value = STATUS_INFO[k].desc;
+    ws.getCell('D'+(2+i)).font = { bold:true };
   });
 
-  // Linha 6: cabeçalho da tabela
   const headerRow = 6;
-  const headers = ['Nº Doca','Modelo','Data','Responsável','Portão','Observação(ões)','Niveladora','Observação(ões)'];
-  headers.forEach((h, i) => {
+  ['Nº Doca','Modelo','Data','Responsável','Portão','Observação(ões)','Niveladora','Observação(ões)'].forEach((h, i) => {
     const cell = ws.getCell(headerRow, i+1);
     cell.value = h;
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCC0000' } };
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFCC0000' } };
+    cell.font = { bold:true, color:{ argb:'FFFFFFFF' } };
+    cell.alignment = { vertical:'middle', horizontal:'center' };
   });
 
-  // Dados
   let r = headerRow + 1;
-  state.forEach(d => {
-    const docaDataRaw = d.data || data;
-    const docaResp = d.resp || resp;
-    const docaDataFmt = docaDataRaw ? docaDataRaw.split('-').reverse().join('/') : '';
-    ws.getRow(r).values = [
-      d.num, d.modelo, docaDataFmt, docaResp,
-      SL[d.portao]||'Não preenchido', d.portaoObs||'',
-      SL[d.nivel]||'Não preenchido', d.nivelObs||'',
-    ];
-    r++;
-  });
+  if (!docas.length) {
+    ws.getCell('A'+r).value = 'Sem dados registrados neste mês';
+  } else {
+    docas.forEach(d => {
+      const docaDataFmt = (d.data||data) ? (d.data||data).split('-').reverse().join('/') : '';
+      ws.getRow(r).values = [
+        d.num, d.modelo, docaDataFmt, d.resp||resp,
+        SL[d.portao]||'Não preenchido', d.portaoObs||'',
+        SL[d.nivel]||'Não preenchido',  d.nivelObs||'',
+      ];
+      r++;
+    });
+  }
 
-  // RESUMO
   let ok=0,res=0,nok=0,na=0;
   const corretivas = [];
-  state.forEach(d => {
+  docas.forEach(d => {
     [['portao',d.portao,d.portaoObs,'Portão',d.portaoAtend,d.portaoMotivo],
-     ['nivel',d.nivel,d.nivelObs,'Niveladora',d.nivelAtend,d.nivelMotivo]].forEach(([c,v,o,eq,atend,motivo])=>{
+     ['nivel', d.nivel, d.nivelObs, 'Niveladora',d.nivelAtend,d.nivelMotivo]].forEach(([,v,o,eq,atend,motivo]) => {
       if(v==='ok') ok++;
       else if(v==='ressalva') res++;
-      else if(v==='naook') nok++;
-      else if(v==='naoapl') na++;
+      else if(v==='naook')    nok++;
+      else if(v==='naoapl')   na++;
       if(v==='ressalva'||v==='naook') corretivas.push({doca:d.num,equip:eq,obs:o||'—',atend:atend||'',motivo:motivo||''});
     });
   });
 
   if (obsGeral) {
     r += 1;
-    ws.getCell('A'+r).value = 'OBS. GERAL DA VISITA';
-    ws.getCell('A'+r).font = { bold: true };
-    r++;
+    ws.getCell('A'+r).value = 'OBS. GERAL DA VISITA'; ws.getCell('A'+r).font = { bold:true }; r++;
     ws.getCell('A'+r).value = obsGeral;
   }
-
   r += 1;
-  ws.getCell('A'+r).value = 'RESUMO';
-  ws.getCell('A'+r).font = { bold: true };
-  r++;
+  ws.getCell('A'+r).value = 'RESUMO'; ws.getCell('A'+r).font = { bold:true }; r++;
   ws.getRow(r).values = ['Preventiva Ok', ok, 'Com Ressalvas', res, 'Não Ok', nok, 'Não se Aplica', na];
-  ws.getRow(r).font = { bold: true };
+  ws.getRow(r).font = { bold:true };
 
-  // CORRETIVAS
   r += 2;
-  ws.getCell('A'+r).value = 'CORRETIVAS';
-  ws.getCell('A'+r).font = { bold: true };
-  r++;
-  const corHeaders = ['Item','Doca','Descrição','Atendimento','Motivo'];
-  corHeaders.forEach((h, i) => {
+  ws.getCell('A'+r).value = 'CORRETIVAS'; ws.getCell('A'+r).font = { bold:true }; r++;
+  ['Item','Doca','Descrição','Atendimento','Motivo'].forEach((h, i) => {
     const cell = ws.getCell(r, i+1);
     cell.value = h;
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCC0000' } };
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFCC0000' } };
+    cell.font = { bold:true, color:{ argb:'FFFFFFFF' } };
   });
   r++;
   if (!corretivas.length) {
@@ -2748,28 +2789,126 @@ async function exportXLSX() {
   } else {
     corretivas.forEach((c, i) => {
       const atendFmt = c.atend ? c.atend.split('-').reverse().join('/') : '';
-      ws.getRow(r).values = [i+1, c.doca, c.obs, atendFmt, c.motivo];
-      r++;
+      ws.getRow(r).values = [i+1, c.doca, c.obs, atendFmt, c.motivo]; r++;
     });
   }
 
-  // Auto-ajuste de largura das colunas conforme o conteúdo
   ws.columns.forEach(col => {
     let maxLen = 10;
-    col.eachCell({ includeEmpty: true }, cell => {
+    col.eachCell({ includeEmpty:true }, cell => {
       const len = cell.value ? String(cell.value).length : 0;
       if (len > maxLen) maxLen = len;
     });
     col.width = Math.min(maxLen + 2, 60);
   });
+}
 
+async function exportXLSX() {
+  const wb = new ExcelJS.Workbook();
+  buildWS(wb, currentUnitKey, {
+    dataGlobal: document.getElementById('data-global').value || '',
+    respGlobal: document.getElementById('resp-global').value || '',
+    obsGeral:   document.getElementById('obs-geral').value   || '',
+    docas: state,
+  });
   const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/octet-stream' });
+  const blob = new Blob([buffer], { type:'application/octet-stream' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const dt = data.replace(/-/g,'') || 'semdata';
+  const dt = (document.getElementById('data-global').value||'').replace(/-/g,'') || 'semdata';
   a.href = url; a.download = 'preventiva_' + currentUnitKey + '_' + dt + '.xlsx'; a.click();
   showToast('XLSX exportado!');
+}
+
+// ── GESTOR ────────────────────────────────────────────────────────────────────
+let gestorDados = {};
+
+function openGestorLogin() {
+  document.getElementById('gestor-senha').value = '';
+  document.getElementById('gestor-erro').textContent = '';
+  document.getElementById('gestor-login-modal').style.display = 'flex';
+}
+
+function closeGestorLogin() {
+  document.getElementById('gestor-login-modal').style.display = 'none';
+}
+
+async function gestorLogin() {
+  const senha = document.getElementById('gestor-senha').value;
+  try {
+    const snap = await db.collection('_config').doc('gestor').get();
+    if (!snap.exists || snap.data().senha !== senha) {
+      document.getElementById('gestor-erro').textContent = 'Senha incorreta.';
+      return;
+    }
+  } catch(e) {
+    document.getElementById('gestor-erro').textContent = 'Erro ao verificar senha.';
+    return;
+  }
+  closeGestorLogin();
+  document.getElementById('gestor-mes').value = monthKey();
+  document.getElementById('gestor-panel').style.display = 'flex';
+}
+
+function fecharGestor() {
+  document.getElementById('gestor-panel').style.display = 'none';
+  document.getElementById('gestor-tabela-wrap').style.display = 'none';
+  gestorDados = {};
+}
+
+async function gestorCarregar() {
+  const mes = document.getElementById('gestor-mes').value;
+  if (!mes) { showToast('Selecione um mês'); return; }
+  setSyncStatus('Carregando...');
+  const keys = Object.keys(UNITS);
+  const snaps = await Promise.all(keys.map(k => db.collection('checklists').doc(k + '_' + mes).get()));
+  gestorDados = {};
+  const tbody = document.getElementById('gestor-table-body');
+  tbody.innerHTML = '';
+  snaps.forEach((snap, i) => {
+    const key = keys[i];
+    const u = UNITS[key];
+    const doc = snap.exists ? snap.data() : null;
+    gestorDados[key] = doc || { dataGlobal:'', respGlobal:'', obsGeral:'', docas:[] };
+    let ok=0,res=0,nok=0,total=0,filled=0;
+    if (doc && doc.docas) {
+      doc.docas.forEach(d => {
+        [d.portao, d.nivel].forEach(v => {
+          total++; if(v) filled++;
+          if(v==='ok') ok++;
+          else if(v==='ressalva') res++;
+          else if(v==='naook') nok++;
+        });
+      });
+    }
+    const pct = total ? Math.round(filled/total*100) : 0;
+    const tr = document.createElement('tr');
+    if (!doc) tr.style.opacity = '0.4';
+    tr.innerHTML = `<td>${u.cliente}</td><td>${u.unidade}</td>`
+      + `<td>${doc ? pct+'%' : '—'}</td>`
+      + `<td>${doc ? ok   : '—'}</td>`
+      + `<td>${doc ? res  : '—'}</td>`
+      + `<td>${doc ? nok  : '—'}</td>`
+      + `<td>${doc ? res+nok : '—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('gestor-tabela-wrap').style.display = 'block';
+  setSyncStatus('');
+}
+
+async function exportGestorXLSX() {
+  if (!Object.keys(gestorDados).length) { showToast('Carregue os dados primeiro'); return; }
+  const mes = document.getElementById('gestor-mes').value;
+  setSyncStatus('Gerando XLSX...');
+  const wb = new ExcelJS.Workbook();
+  Object.keys(gestorDados).forEach(key => buildWS(wb, key, gestorDados[key]));
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'preventiva_consolidado_' + mes + '.xlsx'; a.click();
+  setSyncStatus('');
+  showToast('XLSX consolidado exportado!');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────

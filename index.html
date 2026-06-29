@@ -418,27 +418,25 @@
 
   <button class="gestor-link" onclick="openGestorLogin()">🔒 Área do Gestor</button>
 
-  <div class="sticky-top">
-    <div class="unit-card">
-      <label>Unidade</label>
-      <select id="unit-select" onchange="onUnitChange()"></select>
-    </div>
+  <div class="unit-card">
+    <label>Unidade</label>
+    <select id="unit-select" onchange="onUnitChange()"></select>
+  </div>
 
-    <div class="meta-card">
-      <div class="meta-grid">
-        <div class="field">
-          <label>Data</label>
-          <input type="date" id="data-global" />
-        </div>
-        <div class="field">
-          <label>Responsável</label>
-          <input type="text" id="resp-global" placeholder="Nome do técnico" />
-        </div>
+  <div class="meta-card">
+    <div class="meta-grid">
+      <div class="field">
+        <label>Data</label>
+        <input type="date" id="data-global" />
       </div>
-      <div class="field" style="margin-top:10px;">
-        <label>Observação Geral da Visita</label>
-        <textarea id="obs-geral" placeholder="Anotações gerais da visita..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface-1);resize:none;min-height:58px;"></textarea>
+      <div class="field">
+        <label>Responsável</label>
+        <input type="text" id="resp-global" placeholder="Nome do técnico" />
       </div>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label>Observação Geral da Visita</label>
+      <textarea id="obs-geral" placeholder="Anotações gerais da visita..." style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);background:var(--surface-1);resize:none;min-height:58px;"></textarea>
     </div>
   </div>
 

@@ -2840,12 +2840,16 @@ async function gestorLogin() {
   const senha = document.getElementById('gestor-senha').value;
   try {
     const snap = await db.collection('_config').doc('gestor').get();
-    if (!snap.exists || snap.data().senha !== senha) {
+    if (!snap.exists) {
+      document.getElementById('gestor-erro').textContent = 'Documento _config/gestor não encontrado no Firestore.';
+      return;
+    }
+    if (snap.data().senha !== senha) {
       document.getElementById('gestor-erro').textContent = 'Senha incorreta.';
       return;
     }
   } catch(e) {
-    document.getElementById('gestor-erro').textContent = 'Erro ao verificar senha.';
+    document.getElementById('gestor-erro').textContent = 'Erro: ' + e.message;
     return;
   }
   closeGestorLogin();

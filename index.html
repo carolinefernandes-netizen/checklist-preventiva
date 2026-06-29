@@ -2261,6 +2261,7 @@ const db = firebase.firestore();
 let unsubSnapshot = null;
 let saveTimer = null;
 let fbReady = false;
+let justSaved = false;
 
 // ── HELPERS DE MÊS ───────────────────────────────────────────────────────────
 function currentYYYYMM() {
@@ -2355,6 +2356,8 @@ function loadUnit(key) {
 function startSnapshot(docRef) {
   unsubSnapshot = docRef.onSnapshot(snap => {
     if (!snap.exists || snap.metadata.hasPendingWrites) return;
+    // Snapshot do nosso próprio save: não re-renderiza (evita fechar pickers e sobrescrever estado local)
+    if (justSaved) { justSaved = false; setSyncStatus('✓ Salvo'); return; }
     const data = snap.data();
     document.getElementById('data-global').value = data.dataGlobal || '';
     document.getElementById('resp-global').value = data.respGlobal || '';
@@ -2373,7 +2376,8 @@ function scheduleSave() {
 }
 
 function saveToFirestore() {
-  if (!fbReady) return;
+  if (!fbReady || !state.length) return;
+  justSaved = true;
   const mes = currentYYYYMM();
   db.collection('checklists').doc(currentUnitKey + '_' + mes).update({
     dataGlobal: document.getElementById('data-global').value,

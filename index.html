@@ -2526,7 +2526,7 @@ function buildCard(d) {
   const nLabel = d.nivel  ? STATUS_INFO[d.nivel].label  : '—';
   const pPill  = d.portao ? STATUS_INFO[d.portao].pill  : 'pill-vazio';
   const nPill  = d.nivel  ? STATUS_INFO[d.nivel].pill   : 'pill-vazio';
-  const canConfirm = !d.locked && d.portao && d.nivel && d.data && d.resp;
+  const canConfirm = d.portao && d.nivel && d.data && d.resp;
   const dataFmt = d.data ? d.data.split('-').reverse().join('/') : '—';
 
   wrap.innerHTML = `
@@ -2595,7 +2595,7 @@ function buildStatusBlock(d, campo, label, habilitado) {
     <div class="status-block">
       <div class="status-block-label">${label}</div>
       <div class="status-btns">${btns}</div>
-      ${showObs ? `<div class="obs-area"><textarea data-obs-campo="${campoObs}" ${dis} placeholder="Descreva o problema..." onblur="setObs(${d.id},'${campoObs}',this.value)">${d[campoObs]||''}</textarea></div>` : ''}
+      ${showObs ? `<div class="obs-area"><textarea ${dis} placeholder="Descreva o problema..." oninput="setObs(${d.id},'${campoObs}',this.value)">${d[campoObs]||''}</textarea></div>` : ''}
     </div>
   `;
 }
@@ -2643,13 +2643,6 @@ function removeDoca(id) {
 function confirmarDoca(id) {
   const d = state.find(x => x.id === id);
   if (!d) return;
-  // captura obs que ainda não foram salvas (usuário não desfocou o textarea)
-  const card = document.getElementById('card-' + id);
-  if (card) {
-    card.querySelectorAll('[data-obs-campo]').forEach(ta => {
-      d[ta.getAttribute('data-obs-campo')] = ta.value;
-    });
-  }
   d.locked = true;
   d.open = false;
   renderAll();

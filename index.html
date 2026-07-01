@@ -420,6 +420,13 @@
   .gestor-table tr:hover td { background:#fafaf8; }
   .gestor-table .sem-dados td { color:#aaa; font-style:italic; }
   .gestor-export-btn { background:#CC0000; color:#fff; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; width:100%; margin-top:16px; letter-spacing:.3px; }
+
+  /* DOCA BLOQUEADA */
+  .doca-card.locked .doca-card-header { background: #f0f9eb; border-bottom-color: #c5e0a0; }
+  .locked-badge { display:inline-flex; align-items:center; gap:3px; font-size:10px; font-weight:700; color:#3B6D11; background:#EAF3DE; border:1px solid #639922; border-radius:12px; padding:2px 7px; }
+  .confirm-btn { width:100%; margin-top:10px; padding:11px; background:#3B6D11; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:700; font-family:var(--font); cursor:pointer; letter-spacing:.2px; }
+  .confirm-btn:active { background:#2a5009; transform:scale(0.98); }
+  .doca-locked-info { background:#EAF3DE; border:1px solid #639922; border-radius:8px; padding:9px 12px; margin-top:8px; font-size:12px; color:#3B6D11; }
 </style>
 </head>
 <body>
@@ -544,7 +551,7 @@
           <table class="gestor-table">
             <thead>
               <tr>
-                <th>Cliente</th><th>Unidade</th><th>Preench.</th>
+                <th>Cliente</th><th>Unidade</th><th>Portão %</th><th>Niv %</th>
                 <th>✓ Ok</th><th>⚠ Ressalvas</th><th>✗ Não Ok</th><th>Corretivas</th>
               </tr>
             </thead>
@@ -2395,7 +2402,7 @@ function buildFreshState(key, carryOver = []) {
       portaoAtend: '', portaoMotivo: '',
       nivel: d.niv ? (openN ? prev.nivel : '') : 'naoapl',
       nivelObs: openN ? (prev.nivelObs||'') : '', nivelAtend: '', nivelMotivo: '',
-      data: '', resp: '', dataManual: false, respManual: false, open: false,
+      data: '', resp: '', dataManual: false, respManual: false, open: false, locked: false,
     };
   });
 }
@@ -2512,13 +2519,15 @@ function renderAll() {
 
 function buildCard(d) {
   const wrap = document.createElement('div');
-  wrap.className = 'doca-card';
+  wrap.className = 'doca-card' + (d.locked ? ' locked' : '');
   wrap.id = 'card-' + d.id;
 
   const pLabel = d.portao ? STATUS_INFO[d.portao].label : '—';
   const nLabel = d.nivel  ? STATUS_INFO[d.nivel].label  : '—';
   const pPill  = d.portao ? STATUS_INFO[d.portao].pill  : 'pill-vazio';
   const nPill  = d.nivel  ? STATUS_INFO[d.nivel].pill   : 'pill-vazio';
+  const canConfirm = !d.locked && d.portao && d.nivel && d.data && d.resp;
+  const dataFmt = d.data ? d.data.split('-').reverse().join('/') : '—';
 
   wrap.innerHTML = `
     <div class="doca-card-header" onclick="toggleCard(${d.id})">
@@ -2531,6 +2540,7 @@ function buildCard(d) {
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="doca-status-pills">
+          ${d.locked ? '<span class="locked-badge">🔒 Confirmada</span>' : ''}
           <span class="pill ${pPill}">P: ${pLabel}</span>
           <span class="pill ${nPill}">N: ${nLabel}</span>
         </div>
@@ -2545,16 +2555,20 @@ function buildCard(d) {
       <div class="meta-grid" style="gap:6px;margin-top:6px;">
         <div class="field">
           <label>Data (esta doca)</label>
-          <input type="date" value="${d.data||''}" onchange="setDocaField(${d.id},'data',this.value,'dataManual')" />
+          <input type="date" value="${d.data||''}" ${d.locked ? 'disabled' : ''} onchange="setDocaField(${d.id},'data',this.value,'dataManual')" />
         </div>
         <div class="field">
           <label>Responsável</label>
-          <input type="text" value="${d.resp||''}" placeholder="Idem global" onblur="setDocaField(${d.id},'resp',this.value,'respManual')" />
+          <input type="text" value="${d.resp||''}" ${d.locked ? 'disabled' : ''} placeholder="Idem global" onblur="setDocaField(${d.id},'resp',this.value,'respManual')" />
         </div>
       </div>
-      <div style="margin-top:8px;text-align:right;">
+      ${d.locked
+        ? `<div class="doca-locked-info">🔒 Confirmada por <strong>${d.resp||'—'}</strong> em <strong>${dataFmt}</strong></div>`
+        : (canConfirm ? `<button class="confirm-btn" onclick="confirmarDoca(${d.id})">✓ Confirmar Doca ${d.num}</button>` : '')
+      }
+      ${!d.locked ? `<div style="margin-top:8px;text-align:right;">
         <button onclick="removeDoca(${d.id})" style="background:none;border:none;color:#A32D2D;font-size:12px;cursor:pointer;font-family:var(--font);">✕ Remover doca</button>
-      </div>
+      </div>` : ''}
     </div>
   `;
   return wrap;
@@ -2571,16 +2585,17 @@ function buildStatusBlock(d, campo, label, habilitado) {
   }
   const campoObs = campo + 'Obs';
   const keys = ['ok','ressalva','naook','naoapl'];
+  const dis = d.locked ? 'disabled' : '';
   const btns = keys.map(k => {
     const active = d[campo] === k ? STATUS_INFO[k].cls : '';
-    return `<button class="sbtn ${active}" onclick="setStatus(${d.id},'${campo}','${k}')">${STATUS_INFO[k].label}</button>`;
+    return `<button class="sbtn ${active}" ${dis} onclick="setStatus(${d.id},'${campo}','${k}')">${STATUS_INFO[k].label}</button>`;
   }).join('');
   const showObs = d[campo] === 'ressalva' || d[campo] === 'naook';
   return `
     <div class="status-block">
       <div class="status-block-label">${label}</div>
       <div class="status-btns">${btns}</div>
-      ${showObs ? `<div class="obs-area"><textarea placeholder="Descreva o problema..." onblur="setObs(${d.id},'${campoObs}',this.value)">${d[campoObs]||''}</textarea></div>` : ''}
+      ${showObs ? `<div class="obs-area"><textarea data-obs-campo="${campoObs}" ${dis} placeholder="Descreva o problema..." onblur="setObs(${d.id},'${campoObs}',this.value)">${d[campoObs]||''}</textarea></div>` : ''}
     </div>
   `;
 }
@@ -2625,6 +2640,23 @@ function removeDoca(id) {
   scheduleSave();
 }
 
+function confirmarDoca(id) {
+  const d = state.find(x => x.id === id);
+  if (!d) return;
+  // captura obs que ainda não foram salvas (usuário não desfocou o textarea)
+  const card = document.getElementById('card-' + id);
+  if (card) {
+    card.querySelectorAll('[data-obs-campo]').forEach(ta => {
+      d[ta.getAttribute('data-obs-campo')] = ta.value;
+    });
+  }
+  d.locked = true;
+  d.open = false;
+  renderAll();
+  saveToFirestore();
+  showToast('Doca ' + d.num + ' confirmada e bloqueada!');
+}
+
 // ── ADD MODAL ─────────────────────────────────────────────────────────────────
 function openAddModal() { document.getElementById('add-modal').classList.add('open'); }
 function closeAddModal() { document.getElementById('add-modal').classList.remove('open'); }
@@ -2640,7 +2672,7 @@ function confirmAddDoca() {
     portao: '', portaoObs: '', portaoAtend: '', portaoMotivo: '',
     nivel: temNiveladora ? '' : 'naoapl', nivelObs: '', nivelAtend: '', nivelMotivo: '',
     data: dataGlobal, resp: respGlobal, dataManual: false, respManual: false,
-    open: true,
+    open: true, locked: false,
   });
   closeAddModal();
   document.getElementById('modal-num').value = '';
@@ -2911,38 +2943,50 @@ async function gestorCarregar() {
   gestorDados = {};
   const tbody = document.getElementById('gestor-table-body');
   tbody.innerHTML = '';
-  let gOk=0,gRes=0,gNok=0,gCorr=0,gTotal=0,gFilled=0;
+  let gOk=0,gRes=0,gNok=0,gCorr=0,gTotalP=0,gFilledP=0,gTotalN=0,gFilledN=0;
   snaps.forEach((snap, i) => {
     const key = keys[i];
     const u = UNITS[key];
     const doc = snap.exists ? snap.data() : null;
     gestorDados[key] = doc || { dataGlobal:'', respGlobal:'', obsGeral:'', docas:[] };
-    let ok=0,res=0,nok=0,total=0,filled=0;
+    let ok=0,res=0,nok=0,totalP=0,filledP=0,totalN=0,filledN=0;
     if (doc && doc.docas) {
       doc.docas.forEach(d => {
-        [d.portao, d.nivel].forEach(v => {
-          total++; gTotal++; if(v){ filled++; gFilled++; }
-          if(v==='ok'){ ok++; gOk++; }
-          else if(v==='ressalva'){ res++; gRes++; }
-          else if(v==='naook'){ nok++; gNok++; }
-        });
+        // portão — toda doca tem portão
+        totalP++; gTotalP++;
+        if (d.portao) { filledP++; gFilledP++; }
+        if (d.portao==='ok') { ok++; gOk++; }
+        else if (d.portao==='ressalva') { res++; gRes++; }
+        else if (d.portao==='naook') { nok++; gNok++; }
+        // niveladora — só conta docas que têm niveladora física
+        if (d.temNiveladora) {
+          totalN++; gTotalN++;
+          if (d.nivel) { filledN++; gFilledN++; }
+        }
+        if (d.nivel==='ok') { ok++; gOk++; }
+        else if (d.nivel==='ressalva') { res++; gRes++; }
+        else if (d.nivel==='naook') { nok++; gNok++; }
       });
     }
     const corr = res + nok; gCorr += corr;
-    const pct = total ? Math.round(filled/total*100) : 0;
+    const pctP = totalP ? Math.round(filledP/totalP*100) : 0;
+    const pctN = totalN ? Math.round(filledN/totalN*100) : 0;
     const tr = document.createElement('tr');
     if (!doc) tr.className = 'sem-dados';
     tr.innerHTML = `<td>${u.cliente}</td><td>${u.unidade}</td>`
-      + `<td>${doc ? pct+'%' : '—'}</td>`
+      + `<td>${doc ? pctP+'%' : '—'}</td>`
+      + `<td>${doc ? (totalN ? pctN+'%' : 'N/A') : '—'}</td>`
       + `<td>${doc ? ok   : '—'}</td>`
       + `<td>${doc ? res  : '—'}</td>`
       + `<td>${doc ? nok  : '—'}</td>`
       + `<td>${doc ? corr : '—'}</td>`;
     tbody.appendChild(tr);
   });
-  const gPct = gTotal ? Math.round(gFilled/gTotal*100) : 0;
+  const gPctP = gTotalP ? Math.round(gFilledP/gTotalP*100) : 0;
+  const gPctN = gTotalN ? Math.round(gFilledN/gTotalN*100) : 0;
   document.getElementById('gestor-stats').innerHTML =
-    `<div class="g-stat"><div class="g-num">${gPct}%</div><div class="g-lbl">Preenchimento geral</div></div>`
+    `<div class="g-stat"><div class="g-num">${gPctP}%</div><div class="g-lbl">Portões check.</div></div>`
+    +`<div class="g-stat"><div class="g-num">${gPctN}%</div><div class="g-lbl">Niveladoras check.</div></div>`
     +`<div class="g-stat g-ok"><div class="g-num">${gOk}</div><div class="g-lbl">Preventiva Ok</div></div>`
     +`<div class="g-stat g-res"><div class="g-num">${gRes}</div><div class="g-lbl">Com Ressalvas</div></div>`
     +`<div class="g-stat g-nok"><div class="g-num">${gNok}</div><div class="g-lbl">Não Ok</div></div>`
